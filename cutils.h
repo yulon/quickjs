@@ -28,14 +28,32 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* set if CPU is big endian */
 #undef WORDS_BIGENDIAN
+
+#ifdef __GNUC__
 
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 #define force_inline inline __attribute__((always_inline))
 #define no_inline __attribute__((noinline))
 #define __maybe_unused __attribute__((unused))
+#define __printf_like(a, b) __attribute__((format(printf, a, b)))
+
+#else
+
+#define likely(x) (x)
+#define unlikely(x) (x)
+#define force_inline inline
+#define no_inline
+#define __maybe_unused
+#define __printf_like(a, b)
+
+#endif
 
 #define xglue(x, y) x ## y
 #define glue(x, y) xglue(x, y)
@@ -114,38 +132,86 @@ static inline int64_t min_int64(int64_t a, int64_t b)
 /* WARNING: undefined if a = 0 */
 static inline int clz32(unsigned int a)
 {
+#ifdef __GNUC__
     return __builtin_clz(a);
+#else
+    int i;
+    for (i = 0; a != 0; ++i) { a = a >> 1; }
+    return sizeof(a) * 8 - i;
+#endif
 }
 
 /* WARNING: undefined if a = 0 */
 static inline int clz64(uint64_t a)
 {
+#ifdef __GNUC__
     return __builtin_clzll(a);
+#else
+    int i;
+    for (i = 0; a != 0; ++i) { a = a >> 1; }
+    return sizeof(a) * 8 - i;
+#endif
 }
 
 /* WARNING: undefined if a = 0 */
 static inline int ctz32(unsigned int a)
 {
+#ifdef __GNUC__
     return __builtin_ctz(a);
+#else
+    int i;
+    for (i = 0; a != 0; ++i) { a = a << 1; }
+    return sizeof(a) * 8 - i;
+#endif
 }
 
 /* WARNING: undefined if a = 0 */
 static inline int ctz64(uint64_t a)
 {
+#ifdef __GNUC__
     return __builtin_ctzll(a);
+#else
+    int i;
+    for (i = 0; a != 0; ++i) { a = a << 1; }
+    return sizeof(a) * 8 - i;
+#endif
 }
 
-struct __attribute__((packed)) packed_u64 {
-    uint64_t v;
-};
+#ifdef __GNUC__
+#define packed __attribute__((__packed__))
+#else
+#define packed
+#endif
 
-struct __attribute__((packed)) packed_u32 {
-    uint32_t v;
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif
+struct packed packed_u64 {
+  uint64_t v;
 };
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif
 
-struct __attribute__((packed)) packed_u16 {
-    uint16_t v;
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif
+struct packed packed_u32 {
+  uint32_t v;
 };
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif
+
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif
+struct packed packed_u16 {
+  uint16_t v;
+};
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif
 
 static inline uint64_t get_u64(const uint8_t *tab)
 {
@@ -262,8 +328,9 @@ static inline int dbuf_put_u64(DynBuf *s, uint64_t val)
 {
     return dbuf_put(s, (uint8_t *)&val, 8);
 }
-int __attribute__((format(printf, 2, 3))) dbuf_printf(DynBuf *s,
-                                                      const char *fmt, ...);
+
+int __printf_like(2, 3) dbuf_printf(DynBuf *s, const char *fmt, ...);
+
 void dbuf_free(DynBuf *s);
 static inline BOOL dbuf_error(DynBuf *s) {
     return s->error;
@@ -293,5 +360,9 @@ static inline int from_hex(int c)
 void rqsort(void *base, size_t nmemb, size_t size,
             int (*cmp)(const void *, const void *, void *),
             void *arg);
+
+#ifdef __cplusplus
+} /* extern "C" { */
+#endif
 
 #endif  /* CUTILS_H */

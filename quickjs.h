@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
+#ifdef __GNUC__
 #define js_likely(x)          __builtin_expect(!!(x), 1)
 #define js_unlikely(x)        __builtin_expect(!!(x), 0)
 #define js_force_inline       inline __attribute__((always_inline))
@@ -215,12 +215,42 @@ typedef struct JSValue {
 #define JS_VALUE_GET_FLOAT64(v) ((v).u.float64)
 #define JS_VALUE_GET_PTR(v) ((v).u.ptr)
 
+#ifndef __cplusplus
 #define JS_MKVAL(tag, val) (JSValue){ (JSValueUnion){ .int32 = val }, tag }
+#else
+static inline JSValue JS_MKVAL(int64_t tag, int32_t val) {
+    JSValue js_val;
+    memset(&js_val.u, 0, sizeof(js_val.u));
+    js_val.u.int32 = val;
+    js_val.tag = tag;
+    return js_val;
+}
+#endif
+
+#ifndef __cplusplus
 #define JS_MKPTR(tag, p) (JSValue){ (JSValueUnion){ .ptr = p }, tag }
+#else
+static inline JSValue JS_MKPTR(int64_t tag, void *p) {
+    JSValue js_val;
+    js_val.u.ptr = p;
+    js_val.tag = tag;
+    return js_val;
+}
+#endif
 
 #define JS_TAG_IS_FLOAT64(tag) ((unsigned)(tag) == JS_TAG_FLOAT64)
 
+#ifndef __cplusplus
 #define JS_NAN (JSValue){ .u.float64 = JS_FLOAT64_NAN, JS_TAG_FLOAT64 }
+#else
+static inline JSValue JS_MKFLT(int64_t tag, double val) {
+    JSValue js_val;
+    js_val.u.float64 = val;
+    js_val.tag = tag;
+    return js_val;
+}
+#define JS_NAN (JS_MKFLT(JS_TAG_FLOAT64, JS_FLOAT64_NAN))
+#endif
 
 static inline JSValue __JS_NewFloat64(JSContext *ctx, double d)
 {
@@ -662,7 +692,7 @@ static inline JSValue JS_DupValue(JSContext *ctx, JSValueConst v)
         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
         p->ref_count++;
     }
-    return (JSValue)v;
+    return v;
 }
 
 static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
@@ -671,7 +701,7 @@ static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
         p->ref_count++;
     }
-    return (JSValue)v;
+    return v;
 }
 
 int JS_ToBool(JSContext *ctx, JSValueConst val); /* return -1 for JS_EXCEPTION */

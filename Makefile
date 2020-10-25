@@ -52,13 +52,6 @@ CONFIG_BIGNUM=y
 
 OBJDIR=.obj
 
-ifdef CONFIG_WIN32
-  CROSS_PREFIX=i686-w64-mingw32-
-  EXE=.exe
-else
-  CROSS_PREFIX=
-  EXE=
-endif
 ifdef CONFIG_CLANG
   HOST_CC=clang
   CC=$(CROSS_PREFIX)clang

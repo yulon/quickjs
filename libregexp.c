@@ -427,7 +427,7 @@ static void re_emit_op_u16(REParseState *s, int op, uint32_t val)
     dbuf_put_u16(&s->byte_code, val);
 }
 
-static int __attribute__((format(printf, 2, 3))) re_parse_error(REParseState *s, const char *fmt, ...)
+static int __printf_like(2, 3) re_parse_error(REParseState *s, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
@@ -2519,10 +2519,11 @@ int lre_exec(uint8_t **capture,
     for(i = 0; i < s->capture_count * 2; i++)
         capture[i] = NULL;
     alloca_size = s->stack_size_max * sizeof(stack_buf[0]);
-    stack_buf = alloca(alloca_size);
+    stack_buf = malloc(alloca_size);
     ret = lre_exec_backtrack(s, capture, stack_buf, 0, bc_buf + RE_HEADER_LEN,
                              cbuf + (cindex << cbuf_type), FALSE);
     lre_realloc(s->opaque, s->state_stack, 0);
+    free(stack_buf);
     return ret;
 }
 
